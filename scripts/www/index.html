@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>房东助手 · 房租水电独立记账</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        /* 样式与之前完全相同，此处省略，保持完整 */
+        :root {
+            --primary-color: #1a73e8;
+            --bg-light: #f4f6fa;
+            --card-radius: 16px;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        body {
+            background-color: var(--bg-light);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-bottom: 80px;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 6px 0 10px;
+            border-top: 1px solid #e9ecef;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+            z-index: 1050;
+        }
+        .bottom-nav .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.65rem;
+            color: #6c757d;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: transparent;
+            border: none;
+            flex: 1;
+            max-width: 70px;
+            transition: color 0.15s;
+        }
+        .bottom-nav .nav-item i { font-size: 1.4rem; margin-bottom: 1px; }
+        .bottom-nav .nav-item.active { color: var(--primary-color); font-weight: 600; }
+        .bottom-nav .nav-item.active i { color: var(--primary-color); }
+        .stat-card {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 0.9rem 0.7rem;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--primary-color);
+            height: 100%;
+            transition: transform 0.15s;
+        }
+        .stat-card.clickable { cursor: pointer; }
+        .stat-card.clickable:active { transform: scale(0.96); }
+        .stat-card .stat-number { font-size: 1.5rem; font-weight: 700; color: #0b1e33; line-height: 1.2; }
+        .stat-card .stat-label { font-size: 0.75rem; color: #64748b; }
+        .card { border: none; border-radius: var(--card-radius); box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+        .card-header { background: white; border-bottom: 1px solid #eef2f6; font-weight: 600; font-size: 0.95rem; padding: 10px 14px; }
+        .list-group-item { border-left: none; border-right: none; padding: 10px 12px; font-size: 0.88rem; }
+        .badge-rent { background: #e3f2fd; color: #0d47a1; }
+        .badge-water { background: #d4edda; color: #0b5e2e; }
+        .badge-electric { background: #fff3cd; color: #856404; }
+        .badge-status { font-size: 0.65rem; padding: 3px 10px; border-radius: 30px; }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-inactive { background: #f8d7da; color: #721c24; }
+        .btn-primary { background: var(--primary-color); border: none; }
+        .btn-primary:hover { background: #1558b0; }
+        .btn-outline-primary { color: var(--primary-color); border-color: var(--primary-color); }
+        .btn-outline-primary:hover { background: var(--primary-color); color: white; }
+        .modal-content { border-radius: var(--card-radius); }
+        .section-title { font-size: 1rem; font-weight: 600; margin: 0.8rem 0 0.5rem; display: flex; align-items: center; gap: 6px; }
+        .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 6px; }
+        .quick-actions .btn { flex: 1; min-width: 70px; border-radius: 30px; font-size: 0.8rem; padding: 6px 8px; }
+        .text-muted-small { font-size: 0.7rem; color: #94a3b8; }
+        .amount-rent { color: #0d47a1; font-weight: 600; }
+        .amount-water { color: #0b5e2e; font-weight: 600; }
+        .amount-electric { color: #856404; font-weight: 600; }
+        .footer-note { text-align: center; font-size: 0.65rem; color: #adb5bd; padding: 12px 0 4px; }
+        .progress-custom { height: 20px; border-radius: 30px; background-color: #e9ecef; }
+        .progress-custom .progress-bar { border-radius: 30px; font-size: 0.75rem; font-weight: 600; line-height: 20px; }
+        .floor-divider { background: #e9ecef; padding: 4px 12px; border-radius: 30px; font-weight: 600; color: #495057; margin: 6px 0 4px; display: inline-block; }
+        @media (max-width: 576px) {
+            .bottom-nav .nav-item { font-size: 0.55rem; max-width: 60px; }
+            .bottom-nav .nav-item i { font-size: 1.2rem; }
+        }
+        .tenant-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f3f5; }
+        .tenant-list-item:last-child { border-bottom: none; }
+        .tenant-list-item .name { font-weight: 600; }
+        .tenant-list-item .unit { color: #6c757d; font-size: 0.85rem; }
+        .tenant-list-item .rent { color: #0d47a1; font-weight: 500; }
+        .history-total { font-size: 1.6rem; font-weight: 700; color: #0b1e33; }
+        .query-controls .form-label {
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+        }
+        .query-controls .form-select, .query-controls .form-control {
+            font-size: 0.9rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .query-controls .btn {
+            font-size: 0.9rem;
+            padding: 0.375rem 0.75rem;
+        }
+        @media (max-width: 768px) {
+            .query-controls .col-12 {
+                padding-left: 0;
+                padding-right: 0;
+            }
+        }
+        .compare-card .compare-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .compare-card .compare-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .compare-card .progress {
+            height: 12px;
+            border-radius: 30px;
+            background-color: #e9ecef;
+        }
+        .compare-card .progress-bar {
+            border-radius: 30px;
+        }
+        .compare-card .input-group-text {
+            background: white;
+            border: none;
+            font-weight: 600;
+        }
+        .compare-card .form-control {
+            border: 1px solid #ced4da;
+            border-radius: 30px;
+            padding: 0.3rem 0.8rem;
+            text-align: right;
+            font-weight: 600;
+            background: white;
+        }
+        .compare-card .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(26,115,232,0.25);
+        }
+        .profit { color: #2ecc71; }
+        .loss { color: #e74c3c; }
+        .equal { color: #f39c12; }
+        .filter-row {
+            background: #f8f9fa;
+            border-radius: 30px;
+            padding: 0.5rem 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .filter-row .form-select {
+            width: auto;
+            min-width: 100px;
+        }
+        @media (max-width: 576px) {
+            .filter-row .form-select {
+                width: 100%;
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="appContainer" class="container pb-4 px-3" style="margin-top: 8px;"></div>
+
+<!-- 底部导航 -->
+<nav class="bottom-nav" id="bottomNav">
+    <button class="nav-item active" data-page="dashboard"><i class="bi bi-house-door"></i><span>首页</span></button>
+    <button class="nav-item" data-page="tenants"><i class="bi bi-people"></i><span>租客</span></button>
+    <button class="nav-item" data-page="rent"><i class="bi bi-coin"></i><span>租金</span></button>
+    <button class="nav-item" data-page="water"><i class="bi bi-droplet"></i><span>水费</span></button>
+    <button class="nav-item" data-page="electric"><i class="bi bi-plug"></i><span>电费</span></button>
+    <button class="nav-item" data-page="manage"><i class="bi bi-gear"></i><span>管理</span></button>
+</nav>
+
+<!-- 删除模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill text-danger"></i> 确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="deleteModalBody">确定删除？</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 租客列表模态框 -->
+<div class="modal fade" id="tenantListModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tenantListModalLabel">租客列表</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tenantListModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 导入文件隐藏input -->
+<input type="file" id="importFileInput" accept=".json" style="display:none;">
+
+<!-- Toast -->
+<div id="toastContainer" style="position:fixed; top:8px; left:8px; right:8px; z-index:9999; display:flex; flex-direction:column; gap:5px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ================================ 数据层 ================================
+    const STORAGE_KEY = 'landlord_app_v3_data';
+    
+    function getDefaultData() {
+        return {
+            tenants: [
+                { id: 1, name: '张明', phone: '13800001111', idCard: '110101199001011234', unit: 'A-101', floor: '5', monthlyRent: 2600, deposit: 5200, moveInDate: '2025-03-01', isActive: true, moveOutDate: '' },
+                { id: 2, name: '李华', phone: '13800002222', idCard: '110101199002021234', unit: 'B-202', floor: '8', monthlyRent: 3100, deposit: 6000, moveInDate: '2025-06-15', isActive: true, moveOutDate: '' },
+                { id: 3, name: '王芳', phone: '13800003333', idCard: '110101199003031234', unit: 'C-303', floor: '12', monthlyRent: 1800, deposit: 3000, moveInDate: '2024-11-01', isActive: false, moveOutDate: '2025-08-20' },
+                { id: 4, name: '赵强', phone: '13800004444', idCard: '110101199004041234', unit: 'D-401', floor: '5', monthlyRent: 2200, deposit: 4000, moveInDate: '2025-07-01', isActive: true, moveOutDate: '' },
+            ],
+            rents: [
+                { id: 1, tenantId: 1, amount: 2600, month: '2026-01', date: '2026-01-05', note: '1月租金' },
+                { id: 2, tenantId: 1, amount: 2600, month: '2026-02', date: '2026-02-03', note: '2月租金' },
+                { id: 3, tenantId: 2, amount: 3100, month: '2026-01', date: '2026-01-10', note: '1月租金' },
+                { id: 4, tenantId: 4, amount: 2200, month: '2026-01', date: '2026-01-12', note: '1月租金' },
+            ],
+            water: [
+                { id: 1, tenantId: 1, amount: 120, month: '2026-01', date: '2026-01-28', note: '水费' },
+                { id: 2, tenantId: 2, amount: 95, month: '2026-01', date: '2026-01-29', note: '水费' },
+                { id: 3, tenantId: 4, amount: 80, month: '2026-01', date: '2026-01-30', note: '水费' },
+            ],
+            electric: [
+                { id: 1, tenantId: 1, amount: 210, month: '2026-01', date: '2026-01-28', note: '电费' },
+                { id: 2, tenantId: 2, amount: 185, month: '2026-01', date: '2026-01-29', note: '电费' },
+                { id: 3, tenantId: 3, amount: 90, month: '2025-12', date: '2025-12-20', note: '电费' },
+                { id: 4, tenantId: 4, amount: 160, month: '2026-01', date: '2026-01-30', note: '电费' },
+            ],
+            electricOwnerPaid: { '2026': 500 },
+            waterOwnerPaid: { '2026': 200 }
+        };
+    }
+
+    function loadData() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const d = JSON.parse(raw);
+                if (!d.tenants) d.tenants = [];
+                if (!d.rents) d.rents = [];
+                if (!d.water) d.water = [];
+                if (!d.electric) d.electric = [];
+                if (!d.electricOwnerPaid) d.electricOwnerPaid = {};
+                if (!d.waterOwnerPaid) d.waterOwnerPaid = {};
+                d.tenants.forEach(t => {
+                    if (t.moveOutDate === undefined) t.moveOutDate = '';
+                    if (t.idCard === undefined) t.idCard = '';
+                });
+                return d;
+            }
+        } catch (e) {}
+        return getDefaultData();
+    }
+
+    function saveData(data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function getNextId(arr) {
+        if (!arr || arr.length === 0) return 1;
+        return Math.max(...arr.map(x => x.id)) + 1;
+    }
+
+    function formatMoney(v) { return '¥' + Number(v).toFixed(2); }
+    function formatDate(d) { if (!d) return '-'; const t = new Date(d); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
+    function getTenantName(id, data) { const t = data.tenants.find(x => x.id === id); return t ? t.name : '已删除'; }
+    function getActiveTenants(data) { return data.tenants.filter(t => t.isActive); }
+
+    function showToast(msg, type='success') {
+        const container = document.getElementById('toastContainer');
+        const map = { success: 'bg-success text-white', danger: 'bg-danger text-white', warning: 'bg-warning text-dark', info: 'bg-info text-white' };
+        const cls = map[type] || map.info;
+        const html = `<div class="toast align-items-center show border-0 ${cls}" role="alert" style="border-radius:12px; padding:4px 12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+            <div class="d-flex"><div class="toast-body fw-bold">${msg}</div><button type="button" class="btn-close btn-close-white me-1 m-auto" data-bs-dismiss="toast"></button></div>
+        </div>`;
+        container.insertAdjacentHTML('beforeend', html);
+        setTimeout(() => { const el = container.querySelector('.toast'); if (el) el.remove(); }, 3000);
+    }
+
+    // ================================ 首页（dashboard） ================================
+    window.getPaidTenants = function() {
+        const data = loadData();
+        const currentMonth = new Date().toISOString().slice(0,7);
+        const active = data.tenants.filter(t => t.isActive);
+        return active.filter(t => data.rents.some(r => r.tenantId === t.id && r.month === currentMonth));
+    };
+    window.getUnpaidTenants = function() {
+        const data = loadData();
+        const currentMonth = new Date().toISOString().slice(0,7);
+        const active = data.tenants.filter(t => t.isActive);
+        return active.filter(t => !data.rents.some(r => r.tenantId === t.id && r.month === currentMonth));
+    };
+    window.getOverdueTenants = function() {
+        const data = loadData();
+        const now = new Date();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+        const lastMonthStr = lastMonth.getFullYear() + '-' + String(lastMonth.getMonth()+1).padStart(2,'0');
+        const active = data.tenants.filter(t => t.isActive);
+        return active.filter(t => !data.rents.some(r => r.tenantId === t.id && r.month === lastMonthStr));
+    };
+
+    window.showTenantList = function(title, tenants) {
+        const modalBody = document.getElementById('tenantListModalBody');
+        const modalLabel = document.getElementById('tenantListModalLabel');
+        modalLabel.textContent = title;
+        if (tenants.length === 0) {
+            modalBody.innerHTML = '<p class="text-muted text-center my-3">暂无租客</p>';
+        } else {
+            let html = '';
+            tenants.forEach(t => {
+                html += `<div class="tenant-list-item">
+                    <span class="name">${t.name}</span>
+                    <span class="unit">${t.unit}</span>
+                    <span class="rent">${formatMoney(t.monthlyRent)}</span>
+                </div>`;
+            });
+            modalBody.innerHTML = html;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('tenantListModal'));
+        modal.show();
+    };
+
+    function renderDashboard() {
+        const data = loadData();
+        const active = getActiveTenants(data);
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        
+        const totalReceivable = active.reduce((sum, t) => sum + t.monthlyRent, 0);
+        const totalReceived = data.rents.filter(r => r.month === currentMonth).reduce((sum, r) => sum + r.amount, 0);
+        const percent = totalReceivable > 0 ? Math.min(100, Math.round((totalReceived / totalReceivable) * 100)) : 0;
+
+        const monthWater = data.water.filter(p => p.month === currentMonth).reduce((s, p) => s + p.amount, 0);
+        const monthElectric = data.electric.filter(p => p.month === currentMonth).reduce((s, p) => s + p.amount, 0);
+        const recent = [...data.rents].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+        const recentWater = [...data.water].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 2);
+        const recentElectric = [...data.electric].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 2);
+
+        const paidTenants = window.getPaidTenants();
+        const unpaidTenants = window.getUnpaidTenants();
+        const overdueTenants = window.getOverdueTenants();
+
+        const totalDeposit = active.reduce((sum, t) => sum + t.deposit, 0);
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-house-door-fill text-primary"></i> 房东助手</h5>
+                <span class="text-muted-small">${new Date().toLocaleDateString()}</span>
+            </div>
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">本月租金实收进度</span>
+                    <span class="text-muted-small">${formatMoney(totalReceived)} / ${formatMoney(totalReceivable)}</span>
+                </div>
+                <div class="progress progress-custom mt-1">
+                    <div class="progress-bar bg-primary" style="width: ${percent}%;" role="progressbar" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">${percent}%</div>
+                </div>
+                <div class="text-muted-small mt-1">应收 ${active.length} 户 · 实收 ${data.rents.filter(r => r.month === currentMonth).length} 笔</div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-4">
+                    <div class="stat-card clickable" style="border-left-color:#2ecc71;" onclick="showTenantList('本月已收租客', getPaidTenants())">
+                        <div class="stat-number" style="font-size:1.8rem;">${paidTenants.length}</div>
+                        <div class="stat-label">本月已收</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card clickable" style="border-left-color:#f39c12;" onclick="showTenantList('本月待收租客', getUnpaidTenants())">
+                        <div class="stat-number" style="font-size:1.8rem;">${unpaidTenants.length}</div>
+                        <div class="stat-label">本月待收</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card clickable" style="border-left-color:#e74c3c;" onclick="showTenantList('逾期租客', getOverdueTenants())">
+                        <div class="stat-number" style="font-size:1.8rem;">${overdueTenants.length}</div>
+                        <div class="stat-label">逾期</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-12">
+                    <div class="stat-card" style="border-left-color:#8e44ad;">
+                        <div class="stat-number" style="font-size:1.8rem;">${formatMoney(totalReceived)}</div>
+                        <div class="stat-label">本月租金</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-4">
+                    <div class="stat-card" style="border-left-color:#8e44ad;">
+                        <div class="stat-number" style="font-size:1.1rem;">${formatMoney(totalDeposit)}</div>
+                        <div class="stat-label"><i class="bi bi-shield-check"></i> 押金总数</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card" style="border-left-color:#27ae60;">
+                        <div class="stat-number" style="font-size:1.1rem;">${formatMoney(monthWater)}</div>
+                        <div class="stat-label">本月水费</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card" style="border-left-color:#e67e22;">
+                        <div class="stat-number" style="font-size:1.1rem;">${formatMoney(monthElectric)}</div>
+                        <div class="stat-label">本月电费</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="btn btn-primary btn-sm" onclick="navigateTo('add-tenant')"><i class="bi bi-person-plus"></i> 租客</button>
+                <button class="btn btn-success btn-sm" onclick="navigateTo('add-rent')"><i class="bi bi-cash"></i> 租金</button>
+                <button class="btn btn-info btn-sm text-white" onclick="navigateTo('add-water')"><i class="bi bi-droplet"></i> 水费</button>
+                <button class="btn btn-warning btn-sm text-dark" onclick="navigateTo('add-electric')"><i class="bi bi-plug"></i> 电费</button>
+            </div>
+
+            <div class="section-title"><i class="bi bi-clock-history"></i> 最近租金</div>
+            <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">
+                ${recent.length === 0 ? '<li class="list-group-item text-muted text-center">暂无</li>' :
+                recent.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${getTenantName(p.tenantId, data)} <span class="text-muted-small">${p.month}</span></span><span class="amount-rent">${formatMoney(p.amount)}</span></li>`).join('')}
+            </ul></div></div>
+
+            <div class="row g-2 mt-1">
+                <div class="col-6"><div class="section-title" style="font-size:0.9rem;"><i class="bi bi-droplet text-info"></i> 水费</div>
+                    <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">
+                        ${recentWater.length === 0 ? '<li class="list-group-item text-muted text-center">无</li>' :
+                        recentWater.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${getTenantName(p.tenantId, data)}</span><span class="amount-water">${formatMoney(p.amount)}</span></li>`).join('')}
+                    </ul></div></div>
+                </div>
+                <div class="col-6"><div class="section-title" style="font-size:0.9rem;"><i class="bi bi-plug text-warning"></i> 电费</div>
+                    <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">
+                        ${recentElectric.length === 0 ? '<li class="list-group-item text-muted text-center">无</li>' :
+                        recentElectric.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${getTenantName(p.tenantId, data)}</span><span class="amount-electric">${formatMoney(p.amount)}</span></li>`).join('')}
+                    </ul></div></div>
+                </div>
+            </div>
+            <div class="footer-note">数据保存在浏览器本地</div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('dashboard');
+    }
+
+    // ================================ 租客页面 ================================
+    function renderTenants() {
+        const data = loadData();
+        const activeTenants = getActiveTenants(data);
+
+        const allFloors = [...new Set(data.tenants.map(t => t.floor).filter(f => f))].sort((a,b) => parseInt(a)-parseInt(b));
+        let floorOptions = '<option value="all">全部楼层</option>';
+        allFloors.forEach(f => {
+            floorOptions += `<option value="${f}">${f} 楼</option>`;
+        });
+
+        const currentYear = new Date().getFullYear();
+        const years = Array.from({length:10}, (_, i) => currentYear - i);
+        let yearOptions = years.map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}年</option>`).join('');
+        let monthOptions = `<option value="all">全年</option>`;
+        for (let m = 1; m <= 12; m++) {
+            monthOptions += `<option value="${String(m).padStart(2,'0')}">${m}月</option>`;
+        }
+
+        const groups = {};
+        activeTenants.forEach(t => {
+            const floor = t.floor || '未分类';
+            if (!groups[floor]) groups[floor] = [];
+            groups[floor].push(t);
+        });
+        const sortedFloors = Object.keys(groups).sort((a, b) => {
+            const na = parseInt(a), nb = parseInt(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return a.localeCompare(b);
+        });
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-people"></i> 在租租客</h5>
+                <button class="btn btn-sm btn-primary" onclick="navigateTo('add-tenant')"><i class="bi bi-plus"></i></button>
+            </div>
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">在租人数：${activeTenants.length}</span>
+                    <span class="text-muted-small">共 ${data.tenants.length} 位租客</span>
+                </div>
+            </div>
+        `;
+
+        if (activeTenants.length === 0) {
+            html += `<div class="card"><div class="card-body text-muted text-center">暂无在租租客</div></div>`;
+        } else {
+            sortedFloors.forEach(floor => {
+                const tenants = groups[floor];
+                html += `<div class="mt-2"><span class="floor-divider"><i class="bi bi-building"></i> ${floor} 楼</span></div>`;
+                html += `<div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">`;
+                tenants.forEach(t => {
+                    const rentPaid = data.rents.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+                    const waterPaid = data.water.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+                    const electricPaid = data.electric.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+                    html += `<li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><span class="fw-bold">${t.name}</span> <span class="badge-rent badge">${t.unit}</span>
+                            ${t.isActive ? '<span class="badge-active badge-status">在租</span>' : '<span class="badge-inactive badge-status">退租</span>'}</div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="viewTenant(${t.id})"><i class="bi bi-eye"></i></button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="editTenant(${t.id})"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTenant(${t.id})"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="text-muted-small mt-1">📞 ${t.phone || '无'} · 月租 ${formatMoney(t.monthlyRent)} · ${t.floor}楼</div>
+                        <div class="text-muted-small">已缴: 租金 ${formatMoney(rentPaid)} 水费 ${formatMoney(waterPaid)} 电费 ${formatMoney(electricPaid)}</div>
+                    </li>`;
+                });
+                html += `</ul></div></div>`;
+            });
+        }
+
+        html += `
+            <div class="mt-4"><hr></div>
+            <h6 class="fw-bold"><i class="bi bi-clock-history text-secondary"></i> 历史退租租客查询（近十年）</h6>
+            <div class="card">
+                <div class="card-body">
+                    <div class="query-controls">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-2">
+                                <label class="form-label text-muted-small">时间类型</label>
+                                <select class="form-select" id="historyTimeType">
+                                    <option value="moveOut" selected>退租时间</option>
+                                    <option value="moveIn">入住时间</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label text-muted-small">年份</label>
+                                <select class="form-select" id="historyTenantYear">${yearOptions}</select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <label class="form-label text-muted-small">月份</label>
+                                <select class="form-select" id="historyTenantMonth">${monthOptions}</select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label text-muted-small">楼层</label>
+                                <select class="form-select" id="historyTenantFloor">${floorOptions}</select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="queryHistoryTenants()"><i class="bi bi-search"></i> 查询</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="historyTenantResult" class="mt-3"></div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('tenants');
+        queryHistoryTenants();
+    }
+
+    function queryHistoryTenants() {
+        const timeType = document.getElementById('historyTimeType').value;
+        const year = document.getElementById('historyTenantYear').value;
+        const month = document.getElementById('historyTenantMonth').value;
+        const floor = document.getElementById('historyTenantFloor').value;
+        const data = loadData();
+        let filtered = data.tenants.filter(t => {
+            if (t.isActive) return false;
+            if (timeType === 'moveIn' && !t.moveInDate) return false;
+            if (timeType === 'moveOut' && !t.moveOutDate) return false;
+            return true;
+        });
+        const dateField = timeType === 'moveIn' ? 'moveInDate' : 'moveOutDate';
+        if (year !== 'all') {
+            const startDate = new Date(parseInt(year), 0, 1);
+            const endDate = new Date(parseInt(year), 11, 31);
+            filtered = filtered.filter(t => {
+                const d = new Date(t[dateField]);
+                return d >= startDate && d <= endDate;
+            });
+        } else {
+            const currentYear = new Date().getFullYear();
+            const startYear = currentYear - 9;
+            const startDate = new Date(startYear, 0, 1);
+            filtered = filtered.filter(t => {
+                const d = new Date(t[dateField]);
+                return d >= startDate;
+            });
+        }
+        if (month !== 'all') {
+            filtered = filtered.filter(t => {
+                const d = new Date(t[dateField]);
+                const m = d.getMonth() + 1;
+                return String(m).padStart(2,'0') === month;
+            });
+        }
+        if (floor !== 'all') {
+            filtered = filtered.filter(t => t.floor === floor);
+        }
+        filtered.sort((a,b) => new Date(b[dateField]) - new Date(a[dateField]));
+
+        const resultDiv = document.getElementById('historyTenantResult');
+        if (filtered.length === 0) {
+            resultDiv.innerHTML = '<div class="text-muted text-center py-2">暂无符合条件的退租租客</div>';
+            return;
+        }
+        let listHtml = filtered.map(t => {
+            const rentPaid = data.rents.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+            const waterPaid = data.water.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+            const electricPaid = data.electric.filter(p => p.tenantId === t.id).reduce((s,p) => s + p.amount, 0);
+            return `
+                <div class="list-group-item d-flex justify-content-between align-items-center" style="border-left:none;border-right:none;padding:8px 0;">
+                    <div>
+                        <span class="fw-bold">${t.name}</span>
+                        <span class="badge-rent badge">${t.unit}</span>
+                        <span class="badge-inactive badge-status">退租</span>
+                        <div class="text-muted-small">📞 ${t.phone || '无'} · 月租 ${formatMoney(t.monthlyRent)} · ${t.floor}楼 · 入住 ${formatDate(t.moveInDate)} · 退租 ${formatDate(t.moveOutDate)}</div>
+                        <div class="text-muted-small">已缴: 租金 ${formatMoney(rentPaid)} 水费 ${formatMoney(waterPaid)} 电费 ${formatMoney(electricPaid)}</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editTenant(${t.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTenant(${t.id})"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        resultDiv.innerHTML = `<div class="card"><div class="card-body p-0"><div class="list-group list-group-flush">${listHtml}</div></div></div>`;
+    }
+
+    // ================================ 租金页面（带年月筛选） ================================
+    function renderRent() {
+        const data = loadData();
+        const currentYear = new Date().getFullYear();
+        const years = Array.from({length:10}, (_, i) => currentYear - i);
+        let yearOptions = years.map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}年</option>`).join('');
+        let monthOptions = `<option value="all">全部</option>`;
+        for (let m = 1; m <= 12; m++) {
+            monthOptions += `<option value="${String(m).padStart(2,'0')}">${m}月</option>`;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-coin text-primary"></i> 租金</h5>
+                <button class="btn btn-sm btn-success" onclick="navigateTo('add-rent')"><i class="bi bi-plus"></i></button>
+            </div>
+            <!-- 筛选行 -->
+            <div class="filter-row">
+                <span class="text-muted-small me-2">筛选：</span>
+                <select class="form-select form-select-sm" id="rentYear" onchange="updateRentList()">
+                    ${yearOptions}
+                </select>
+                <select class="form-select form-select-sm" id="rentMonth" onchange="updateRentList()">
+                    ${monthOptions}
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateRentList()"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div id="rentListContainer">
+                <!-- 由 updateRentList 填充 -->
+            </div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('rent');
+        updateRentList();
+    }
+
+    function updateRentList() {
+        const data = loadData();
+        const year = document.getElementById('rentYear').value;
+        const month = document.getElementById('rentMonth').value;
+        const items = data.rents || [];
+        let filtered = items.filter(item => {
+            const itemYear = item.month.slice(0,4);
+            if (year !== 'all' && itemYear !== year) return false;
+            if (month !== 'all' && item.month.slice(5,7) !== month) return false;
+            return true;
+        });
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const container = document.getElementById('rentListContainer');
+        if (!container) return;
+        let html = `<div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">`;
+        if (filtered.length === 0) {
+            html += `<li class="list-group-item text-muted text-center">暂无符合条件的租金记录</li>`;
+        } else {
+            filtered.forEach(p => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div><span class="fw-bold">${getTenantName(p.tenantId, data)}</span> <span class="text-muted-small">${p.month}</span><br><span class="text-muted-small">${formatDate(p.date)} ${p.note ? '· '+p.note : ''}</span></div>
+                    <div><span class="amount-rent">${formatMoney(p.amount)}</span>
+                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteItem('rents', ${p.id})"><i class="bi bi-trash"></i></button></div>
+                </li>`;
+            });
+        }
+        html += `</ul></div></div>`;
+        container.innerHTML = html;
+    }
+
+    // ================================ 水电费对比专用函数（带年月筛选） ================================
+    function renderElectric() { renderUtilityCompare('electric', '电费', 'bi-plug', 'warning', 'amount-electric'); }
+    function renderWater() { renderUtilityCompare('water', '水费', 'bi-droplet', 'info', 'amount-water'); }
+
+    function renderUtilityCompare(key, label, icon, color, amountClass) {
+        const data = loadData();
+        const currentYear = new Date().getFullYear();
+        const years = Array.from({length:10}, (_, i) => currentYear - i);
+        let yearOptions = years.map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}年</option>`).join('');
+        let monthOptions = `<option value="all">全部</option>`;
+        for (let m = 1; m <= 12; m++) {
+            monthOptions += `<option value="${String(m).padStart(2,'0')}">${m}月</option>`;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
+                <h5 class="fw-bold mb-0"><i class="bi ${icon} text-${color}"></i> ${label}</h5>
+                <button class="btn btn-sm btn-${color}" onclick="navigateTo('add-${key}')"><i class="bi bi-plus"></i></button>
+            </div>
+            <!-- 对比卡片 -->
+            <div class="card compare-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-bar-chart-fill"></i> 全年${label}对比</span>
+                    <div style="width:150px;">
+                        <select class="form-select form-select-sm" id="compareYear" onchange="updateCompareContent('${key}','${label}','${icon}','${color}','${amountClass}')">
+                            ${yearOptions}
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="compareContent" class="row g-3"></div>
+                </div>
+            </div>
+            <!-- 筛选行 -->
+            <div class="filter-row mt-2">
+                <span class="text-muted-small me-2">明细筛选：</span>
+                <select class="form-select form-select-sm" id="listYear" onchange="updateUtilityList('${key}','${label}','${icon}','${color}','${amountClass}')">
+                    ${yearOptions}
+                </select>
+                <select class="form-select form-select-sm" id="listMonth" onchange="updateUtilityList('${key}','${label}','${icon}','${color}','${amountClass}')">
+                    ${monthOptions}
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateUtilityList('${key}','${label}','${icon}','${color}','${amountClass}')"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div id="utilityDetailList" class="mt-3"></div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav(key === 'electric' ? 'electric' : 'water');
+        // 默认填充对比内容和列表
+        updateCompareContent(key, label, icon, color, amountClass);
+        updateUtilityList(key, label, icon, color, amountClass);
+    }
+
+    function updateCompareContent(key, label, icon, color, amountClass) {
+        const data = loadData();
+        const year = document.getElementById('compareYear') ? document.getElementById('compareYear').value : new Date().getFullYear().toString();
+        const items = data[key] || [];
+        const yearItems = items.filter(item => item.month.slice(0,4) === year);
+        const totalReceived = yearItems.reduce((sum, item) => sum + item.amount, 0);
+        const ownerPaidKey = key === 'electric' ? 'electricOwnerPaid' : 'waterOwnerPaid';
+        const ownerPaid = data[ownerPaidKey] && data[ownerPaidKey][year] ? data[ownerPaidKey][year] : 0;
+
+        const diff = totalReceived - ownerPaid;
+        const diffAbs = Math.abs(diff);
+        const diffClass = diff > 0 ? 'profit' : (diff < 0 ? 'loss' : 'equal');
+        const diffSymbol = diff > 0 ? '+' : '';
+
+        const maxVal = Math.max(totalReceived, ownerPaid, 1);
+        const tenantPercent = (totalReceived / maxVal) * 100;
+        const ownerPercent = (ownerPaid / maxVal) * 100;
+
+        const container = document.getElementById('compareContent');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="col-md-6">
+                <div class="stat-card" style="border-left-color:#2ecc71;">
+                    <div class="stat-label">租客已缴${label}</div>
+                    <div class="stat-number" style="font-size:1.8rem;">${formatMoney(totalReceived)}</div>
+                    <div class="text-muted-small">共 ${yearItems.length} 笔记录</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="stat-card" style="border-left-color:#1a73e8;">
+                    <div class="stat-label">房东已交${label}</div>
+                    <div class="input-group mb-2" style="max-width:200px; float:right;">
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="ownerPaidInput" value="${ownerPaid}" 
+                               onchange="updateOwnerPaid('${key}','${year}')" onblur="updateOwnerPaid('${key}','${year}')">
+                        <span class="input-group-text">元</span>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <div class="stat-number" style="font-size:1.8rem;">${formatMoney(ownerPaid)}</div>
+                    <div class="text-muted-small">点击金额可编辑</div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">差额：<span class="${diffClass}">${diffSymbol}${formatMoney(diffAbs)}</span></span>
+                    <span class="text-muted-small">${diff > 0 ? '盈利' : (diff < 0 ? '亏损' : '持平')}</span>
+                </div>
+                <div class="progress mt-1" style="height:14px;">
+                    <div class="progress-bar bg-success" style="width: ${tenantPercent}%;" role="progressbar">租客 ${Math.round(tenantPercent)}%</div>
+                    <div class="progress-bar bg-primary" style="width: ${ownerPercent}%;" role="progressbar">房东 ${Math.round(ownerPercent)}%</div>
+                </div>
+                <div class="d-flex justify-content-between text-muted-small mt-1">
+                    <span><span class="badge bg-success">租客</span> ${formatMoney(totalReceived)}</span>
+                    <span><span class="badge bg-primary">房东</span> ${formatMoney(ownerPaid)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateOwnerPaid(key, year) {
+        const input = document.getElementById('ownerPaidInput');
+        if (!input) return;
+        const val = parseFloat(input.value);
+        if (isNaN(val)) return;
+        const data = loadData();
+        const ownerPaidKey = key === 'electric' ? 'electricOwnerPaid' : 'waterOwnerPaid';
+        if (!data[ownerPaidKey]) data[ownerPaidKey] = {};
+        data[ownerPaidKey][year] = val;
+        saveData(data);
+        const label = key === 'electric' ? '电费' : '水费';
+        const icon = key === 'electric' ? 'bi-plug' : 'bi-droplet';
+        const color = key === 'electric' ? 'warning' : 'info';
+        const amountClass = key === 'electric' ? 'amount-electric' : 'amount-water';
+        updateCompareContent(key, label, icon, color, amountClass);
+        showToast('房东已交金额已更新', 'success');
+    }
+
+    function updateUtilityList(key, label, icon, color, amountClass) {
+        const data = loadData();
+        const year = document.getElementById('listYear') ? document.getElementById('listYear').value : new Date().getFullYear().toString();
+        const month = document.getElementById('listMonth') ? document.getElementById('listMonth').value : 'all';
+        const items = data[key] || [];
+        let filtered = items.filter(item => {
+            const itemYear = item.month.slice(0,4);
+            if (year !== 'all' && itemYear !== year) return false;
+            if (month !== 'all' && item.month.slice(5,7) !== month) return false;
+            return true;
+        });
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const container = document.getElementById('utilityDetailList');
+        if (!container) return;
+        let html = `<div class="card"><div class="card-header"><i class="bi bi-list-ul"></i> ${year}年 ${month !== 'all' ? parseInt(month)+'月' : '全年'} ${label}明细</div><div class="card-body p-0"><ul class="list-group list-group-flush">`;
+        if (filtered.length === 0) {
+            html += `<li class="list-group-item text-muted text-center">该条件下暂无${label}记录</li>`;
+        } else {
+            filtered.forEach(p => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div><span class="fw-bold">${getTenantName(p.tenantId, data)}</span> <span class="text-muted-small">${p.month}</span><br><span class="text-muted-small">${formatDate(p.date)} ${p.note ? '· '+p.note : ''}</span></div>
+                    <div><span class="${amountClass}">${formatMoney(p.amount)}</span>
+                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteItem('${key}', ${p.id})"><i class="bi bi-trash"></i></button></div>
+                </li>`;
+            });
+        }
+        html += `</ul></div></div>`;
+        container.innerHTML = html;
+    }
+
+    // ================================ 管理页面 ================================
+    function renderManage() {
+        const currentYear = new Date().getFullYear();
+        const years = Array.from({length: 10}, (_, i) => currentYear - i);
+        let yearOptions = years.map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}年</option>`).join('');
+        let monthOptions = `<option value="all">全年</option>`;
+        for (let m = 1; m <= 12; m++) {
+            monthOptions += `<option value="${String(m).padStart(2,'0')}">${m}月</option>`;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-gear"></i> 数据管理</h5>
+            </div>
+            <div class="card">
+                <div class="card-header"><i class="bi bi-clock-history"></i> 历史租金查询</div>
+                <div class="card-body">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-5">
+                            <label class="form-label text-muted-small">年份</label>
+                            <select class="form-select" id="historyYear">${yearOptions}</select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label text-muted-small">月份</label>
+                            <select class="form-select" id="historyMonth">${monthOptions}</select>
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-primary w-100" onclick="queryHistoryRent()"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div id="historyResult" class="mt-3"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><i class="bi bi-archive"></i> 数据备份与恢复</div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-outline-primary w-100" onclick="exportData()"><i class="bi bi-download"></i> 导出数据</button>
+                        </div>
+                        <div class="col-6">
+                            <label class="btn btn-outline-success w-100" for="importFileInput"><i class="bi bi-upload"></i> 导入数据</button>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button class="btn btn-outline-danger w-100" onclick="confirmClearData()"><i class="bi bi-trash"></i> 清空所有数据</button>
+                        </div>
+                    </div>
+                    <div class="text-muted-small mt-2">导入将覆盖当前所有数据，请谨慎操作。</div>
+                </div>
+            </div>
+            <div class="footer-note">数据存储在浏览器本地 (localStorage)</div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('manage');
+        const input = document.getElementById('importFileInput');
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        newInput.addEventListener('change', importData);
+        queryHistoryRent();
+    }
+
+    function queryHistoryRent() {
+        const year = document.getElementById('historyYear').value;
+        const month = document.getElementById('historyMonth').value;
+        const data = loadData();
+        let filtered = data.rents.filter(r => {
+            const rYear = r.month.slice(0,4);
+            if (rYear !== year) return false;
+            if (month === 'all') return true;
+            return r.month.slice(5,7) === month;
+        });
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        const total = filtered.reduce((sum, r) => sum + r.amount, 0);
+        const displayMonth = month === 'all' ? '全年' : parseInt(month)+'月';
+        const resultDiv = document.getElementById('historyResult');
+        if (filtered.length === 0) {
+            resultDiv.innerHTML = `<div class="text-muted text-center py-2">${year}年 ${displayMonth} 暂无租金记录</div>`;
+            return;
+        }
+        let listHtml = filtered.map(r => `
+            <div class="list-group-item d-flex justify-content-between align-items-center" style="border-left:none;border-right:none;padding:8px 0;">
+                <div><span class="fw-bold">${getTenantName(r.tenantId, data)}</span> <span class="text-muted-small">${r.month} · ${formatDate(r.date)}</span></div>
+                <span class="amount-rent">${formatMoney(r.amount)}</span>
+            </div>
+        `).join('');
+        resultDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold">${year}年 ${displayMonth} 总租金</span>
+                <span class="history-total">${formatMoney(total)}</span>
+            </div>
+            <div class="card"><div class="card-body p-0"><div class="list-group list-group-flush">${listHtml}</div></div></div>
+            <div class="text-muted-small mt-1">共 ${filtered.length} 笔记录</div>
+        `;
+    }
+
+    // ================================ 数据导入导出（通用化，兼容WebView） ================================
+    // 导出：直接使用a标签下载，兼容所有环境
+    function exportData() {
+        const data = loadData();
+        const jsonStr = JSON.stringify(data, null, 2);
+        const defaultName = `房东数据_${new Date().toISOString().slice(0,10)}.json`;
+        try {
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = defaultName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('数据导出成功！', 'success');
+        } catch (e) {
+            showToast('导出失败，请重试', 'danger');
+        }
+    }
+
+    // 导入：使用input和FileReader，兼容所有环境
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (typeof imported !== 'object' || !('tenants' in imported) || !('rents' in imported) || !('water' in imported) || !('electric' in imported)) {
+                    showToast('无效的数据文件，请检查格式', 'danger');
+                    return;
+                }
+                if (confirm('导入将覆盖当前所有数据，确定继续吗？')) {
+                    saveData(imported);
+                    showToast('数据导入成功！', 'success');
+                    renderManage();
+                }
+            } catch (err) {
+                showToast('文件解析失败：' + err.message, 'danger');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function confirmClearData() {
+        document.getElementById('deleteModalBody').innerHTML = `
+            <p><strong>确认清空所有数据？</strong></p>
+            <p class="text-danger">此操作将删除所有租客、租金、水费、电费记录，且不可恢复！</p>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            modal.hide();
+            const empty = { tenants: [], rents: [], water: [], electric: [], electricOwnerPaid: {}, waterOwnerPaid: {} };
+            saveData(empty);
+            showToast('所有数据已清空', 'warning');
+            renderManage();
+        };
+    }
+
+    // ================================ 查看租客详情 ================================
+    function viewTenant(id) {
+        const data = loadData();
+        const t = data.tenants.find(x => x.id === id);
+        if (!t) { showToast('租客不存在', 'danger'); return; }
+        const rents = data.rents.filter(p => p.tenantId === id);
+        const waters = data.water.filter(p => p.tenantId === id);
+        const electrics = data.electric.filter(p => p.tenantId === id);
+        const totalRent = rents.reduce((s,p) => s + p.amount, 0);
+        const totalWater = waters.reduce((s,p) => s + p.amount, 0);
+        const totalElectric = electrics.reduce((s,p) => s + p.amount, 0);
+
+        let html = `<div class="mt-1 mb-2"><h5 class="fw-bold"><i class="bi bi-person-badge"></i> ${t.name}</h5></div>
+            <div class="card"><div class="card-body">
+                <div><span class="fw-bold">${t.unit}</span> <span class="${t.isActive ? 'badge-active' : 'badge-inactive'} badge-status">${t.isActive ? '在租' : '已退租'}</span></div>
+                <div class="text-muted-small">📞 ${t.phone || '无'} · 身份证 ${t.idCard || '未录入'}</div>
+                <div class="text-muted-small">入住 ${formatDate(t.moveInDate)} · ${t.floor || '未设'}楼</div>
+                ${!t.isActive && t.moveOutDate ? `<div class="text-muted-small">退租日期：${formatDate(t.moveOutDate)}</div>` : ''}
+                <hr class="my-2"><div class="row g-1"><div class="col-4"><span class="text-muted-small">月租金</span><br><span class="fw-bold">${formatMoney(t.monthlyRent)}</span></div>
+                <div class="col-4"><span class="text-muted-small">押金</span><br><span class="fw-bold">${formatMoney(t.deposit)}</span></div>
+                <div class="col-4"><span class="text-muted-small">状态</span><br>${t.isActive ? '在租' : '已退租'}</div></div>
+            </div></div>
+            <div class="row g-1 mt-1">
+                <div class="col-4"><div class="stat-card" style="border-left-color:#2ecc71; padding:0.5rem;"><div class="stat-number" style="font-size:1.2rem;">${formatMoney(totalRent)}</div><div class="stat-label">总租金</div></div></div>
+                <div class="col-4"><div class="stat-card" style="border-left-color:#17a2b8; padding:0.5rem;"><div class="stat-number" style="font-size:1.2rem;">${formatMoney(totalWater)}</div><div class="stat-label">总水费</div></div></div>
+                <div class="col-4"><div class="stat-card" style="border-left-color:#f39c12; padding:0.5rem;"><div class="stat-number" style="font-size:1.2rem;">${formatMoney(totalElectric)}</div><div class="stat-label">总电费</div></div></div>
+            </div>
+            <div class="mt-2"><button class="btn btn-outline-primary w-100" onclick="navigateTo('tenants')">返回列表</button></div>
+            <div class="section-title mt-2"><i class="bi bi-coin"></i> 租金明细</div>
+            <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">${rents.length===0?'<li class="list-group-item text-muted">无</li>':rents.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${p.month}</span><span class="amount-rent">${formatMoney(p.amount)}</span></li>`).join('')}</ul></div></div>
+            <div class="section-title"><i class="bi bi-droplet text-info"></i> 水费明细</div>
+            <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">${waters.length===0?'<li class="list-group-item text-muted">无</li>':waters.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${p.month}</span><span class="amount-water">${formatMoney(p.amount)}</span></li>`).join('')}</ul></div></div>
+            <div class="section-title"><i class="bi bi-plug text-warning"></i> 电费明细</div>
+            <div class="card"><div class="card-body p-0"><ul class="list-group list-group-flush">${electrics.length===0?'<li class="list-group-item text-muted">无</li>':electrics.map(p => `<li class="list-group-item d-flex justify-content-between"><span>${p.month}</span><span class="amount-electric">${formatMoney(p.amount)}</span></li>`).join('')}</ul></div></div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('tenants');
+    }
+
+    // ================================ 添加/编辑表单 ================================
+    function renderAddPage() {
+        let html = `<div class="mt-1 mb-2"><h5 class="fw-bold"><i class="bi bi-plus-circle"></i> 快速添加</h5></div>
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-primary w-100 py-2" onclick="navigateTo('add-tenant')"><i class="bi bi-person-plus"></i><br><small>租客</small></button></div>
+                <div class="col-6"><button class="btn btn-success w-100 py-2" onclick="navigateTo('add-rent')"><i class="bi bi-cash"></i><br><small>租金</small></button></div>
+                <div class="col-6"><button class="btn btn-info w-100 py-2 text-white" onclick="navigateTo('add-water')"><i class="bi bi-droplet"></i><br><small>水费</small></button></div>
+                <div class="col-6"><button class="btn btn-warning w-100 py-2 text-dark" onclick="navigateTo('add-electric')"><i class="bi bi-plug"></i><br><small>电费</small></button></div>
+            </div>
+            <div class="mt-3"><button class="btn btn-outline-secondary w-100" onclick="navigateTo('dashboard')">返回首页</button></div>`;
+        document.getElementById('appContainer').innerHTML = html;
+        setActiveNav('manage');
+    }
+
+    function renderAddTenant() {
+        let floorOptions = '';
+        for (let i = 1; i <= 10; i++) {
+            floorOptions += `<option value="${i}">${i} 楼</option>`;
+        }
+        showForm('添加租客', `
+            <div class="mb-2"><label class="form-label">姓名 *</label><input class="form-control" id="fName" required></div>
+            <div class="mb-2"><label class="form-label">身份证号</label><input class="form-control" id="fIdCard" placeholder="请输入身份证号码"></div>
+            <div class="mb-2"><label class="form-label">电话</label><input class="form-control" id="fPhone"></div>
+            <div class="mb-2"><label class="form-label">单元号 *</label><input class="form-control" id="fUnit" placeholder="如 A-101" required></div>
+            <div class="mb-2"><label class="form-label">楼层 *</label>
+                <select class="form-select" id="fFloor" required>
+                    <option value="">-- 请选择楼层 --</option>
+                    ${floorOptions}
+                </select>
+            </div>
+            <div class="mb-2"><label class="form-label">月租金 *</label><input type="number" step="0.01" class="form-control" id="fRent" required></div>
+            <div class="mb-2"><label class="form-label">押金</label><input type="number" step="0.01" class="form-control" id="fDeposit" value="0"></div>
+            <div class="mb-2"><label class="form-label">入住日期</label><input type="date" class="form-control" id="fMoveIn"></div>
+            <div class="mb-2"><label class="form-label">退租日期（退租时填写）</label><input type="date" class="form-control" id="fMoveOut"></div>
+            <button type="submit" class="btn btn-primary w-100">保存租客</button>
+        `, function(e) {
+            e.preventDefault();
+            const name = document.getElementById('fName').value.trim();
+            const idCard = document.getElementById('fIdCard').value.trim();
+            const phone = document.getElementById('fPhone').value.trim();
+            const unit = document.getElementById('fUnit').value.trim();
+            const floor = document.getElementById('fFloor').value;
+            const rent = parseFloat(document.getElementById('fRent').value);
+            if (!name || !unit || !floor || !rent) { showToast('请填写所有必填字段', 'warning'); return; }
+            const data = loadData();
+            if (data.tenants.some(t => t.unit === unit)) { showToast('单元号已被占用', 'danger'); return; }
+            data.tenants.push({
+                id: getNextId(data.tenants),
+                name,
+                idCard: idCard,
+                phone: phone,
+                unit,
+                floor: floor,
+                monthlyRent: rent,
+                deposit: parseFloat(document.getElementById('fDeposit').value) || 0,
+                moveInDate: document.getElementById('fMoveIn').value || '',
+                moveOutDate: '',
+                isActive: true
+            });
+            saveData(data);
+            showToast(`租客 ${name} 添加成功`);
+            navigateTo('tenants');
+        });
+    }
+
+    function renderAddRent() { renderAddCategory('rents', '租金', 'success', 'add-rent'); }
+    function renderAddWater() { renderAddCategory('water', '水费', 'info', 'add-water'); }
+    function renderAddElectric() { renderAddCategory('electric', '电费', 'warning', 'add-electric'); }
+
+    function renderAddCategory(key, label, color, navPage) {
+        const data = loadData();
+        const active = getActiveTenants(data);
+        const today = new Date().toISOString().slice(0,10);
+        const month = today.slice(0,7);
+        let tenantOptions = active.map(t => `<option value="${t.id}">${t.name} (${t.unit})</option>`).join('');
+        if (active.length === 0) tenantOptions = '<option value="">暂无在租租客</option>';
+        showForm(`录入${label}`, `
+            <div class="mb-2"><label class="form-label">租客 *</label><select class="form-select" id="fTenant" required>${tenantOptions}</select></div>
+            <div class="mb-2"><label class="form-label">金额 *</label><input type="number" step="0.01" class="form-control" id="fAmount" required></div>
+            <div class="mb-2"><label class="form-label">月份 *</label><input type="month" class="form-control" id="fMonth" value="${month}" required></div>
+            <div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="fDate" value="${today}"></div>
+            <div class="mb-2"><label class="form-label">备注</label><input class="form-control" id="fNote" placeholder="可选"></div>
+            <button type="submit" class="btn btn-${color} w-100">保存${label}</button>
+        `, function(e) {
+            e.preventDefault();
+            const tenantId = parseInt(document.getElementById('fTenant').value);
+            const amount = parseFloat(document.getElementById('fAmount').value);
+            const month = document.getElementById('fMonth').value;
+            if (!tenantId || !amount || !month) { showToast('请填写完整', 'warning'); return; }
+            const data = loadData();
+            const newItem = { id: getNextId(data[key]), tenantId, amount, month, date: document.getElementById('fDate').value || today, note: document.getElementById('fNote').value.trim() };
+            data[key].push(newItem);
+            saveData(data);
+            showToast(`${label}记录已添加`);
+            navigateTo(navPage === 'add-rent' ? 'rent' : navPage === 'add-water' ? 'water' : 'electric');
+        });
+    }
+
+    function editTenant(id) {
+        const data = loadData();
+        const t = data.tenants.find(x => x.id === id);
+        if (!t) return;
+        let floorOptions = '';
+        for (let i = 1; i <= 10; i++) {
+            floorOptions += `<option value="${i}" ${t.floor == i ? 'selected' : ''}>${i} 楼</option>`;
+        }
+        const html = `
+            <div class="mt-1 mb-2"><h5 class="fw-bold">编辑租客</h5></div>
+            <div class="card"><div class="card-body"><form id="editForm">
+                <div class="mb-2"><label>姓名</label><input class="form-control" id="eName" value="${t.name}" required></div>
+                <div class="mb-2"><label>身份证号</label><input class="form-control" id="eIdCard" value="${t.idCard||''}"></div>
+                <div class="mb-2"><label>电话</label><input class="form-control" id="ePhone" value="${t.phone||''}"></div>
+                <div class="mb-2"><label>单元号</label><input class="form-control" id="eUnit" value="${t.unit}" required></div>
+                <div class="mb-2"><label>楼层</label><select class="form-select" id="eFloor">${floorOptions}</select></div>
+                <div class="mb-2"><label>月租金</label><input type="number" step="0.01" class="form-control" id="eRent" value="${t.monthlyRent}" required></div>
+                <div class="mb-2"><label>押金</label><input type="number" step="0.01" class="form-control" id="eDeposit" value="${t.deposit}"></div>
+                <div class="mb-2"><label>入住日期</label><input type="date" class="form-control" id="eMoveIn" value="${t.moveInDate||''}"></div>
+                <div class="mb-2"><label>退租日期</label><input type="date" class="form-control" id="eMoveOut" value="${t.moveOutDate||''}"></div>
+                <div class="mb-2 form-check"><input class="form-check-input" type="checkbox" id="eActive" ${t.isActive?'checked':''}><label class="form-check-label">在租</label></div>
+                <button type="submit" class="btn btn-primary w-100">更新</button>
+            </form></div></div>
+            <div class="mt-2"><button class="btn btn-outline-secondary w-100" onclick="navigateTo('tenants')">返回</button></div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const data = loadData();
+            const idx = data.tenants.findIndex(x => x.id === id);
+            if (idx === -1) return;
+            const unit = document.getElementById('eUnit').value.trim();
+            if (data.tenants.some(x => x.unit === unit && x.id !== id)) { showToast('单元号冲突', 'danger'); return; }
+            const isActive = document.getElementById('eActive').checked;
+            let moveOutDate = document.getElementById('eMoveOut').value;
+            if (!isActive && !moveOutDate) {
+                moveOutDate = new Date().toISOString().slice(0,10);
+            }
+            if (isActive) {
+                moveOutDate = '';
+            }
+            data.tenants[idx] = {
+                ...data.tenants[idx],
+                name: document.getElementById('eName').value.trim(),
+                idCard: document.getElementById('eIdCard').value.trim(),
+                phone: document.getElementById('ePhone').value.trim(),
+                unit: unit,
+                floor: document.getElementById('eFloor').value,
+                monthlyRent: parseFloat(document.getElementById('eRent').value),
+                deposit: parseFloat(document.getElementById('eDeposit').value) || 0,
+                moveInDate: document.getElementById('eMoveIn').value || '',
+                moveOutDate: moveOutDate,
+                isActive: isActive
+            };
+            saveData(data);
+            showToast('更新成功');
+            navigateTo('tenants');
+        });
+        setActiveNav('tenants');
+    }
+
+    function showForm(title, fieldsHtml, onSubmit) {
+        const html = `
+            <div class="mt-1 mb-2"><h5 class="fw-bold">${title}</h5></div>
+            <div class="card"><div class="card-body"><form id="dynamicForm">${fieldsHtml}</form></div></div>
+            <div class="mt-2"><button class="btn btn-outline-secondary w-100" onclick="navigateTo('dashboard')">返回</button></div>
+        `;
+        document.getElementById('appContainer').innerHTML = html;
+        document.getElementById('dynamicForm').addEventListener('submit', onSubmit);
+        setActiveNav('manage');
+    }
+
+    // ================================ 删除操作 ================================
+    function deleteItem(key, id) {
+        const labelMap = { rents: '租金', water: '水费', electric: '电费' };
+        document.getElementById('deleteModalBody').innerHTML = `删除此${labelMap[key]||'记录'}？`;
+        showDeleteModal(() => {
+            let d = loadData();
+            d[key] = d[key].filter(x => x.id !== id);
+            saveData(d);
+            showToast('已删除');
+            if (key === 'rents') { renderRent(); }
+            else if (key === 'water') { renderWater(); }
+            else if (key === 'electric') { renderElectric(); }
+            else { navigateTo('rent'); }
+        });
+    }
+
+    function deleteTenant(id) {
+        const data = loadData();
+        const t = data.tenants.find(x => x.id === id);
+        if (!t) return;
+        document.getElementById('deleteModalBody').innerHTML = `删除租客 <strong>${t.name}</strong> 及其所有关联记录（租金/水费/电费）？`;
+        showDeleteModal(() => {
+            let d = loadData();
+            d.tenants = d.tenants.filter(x => x.id !== id);
+            d.rents = d.rents.filter(x => x.tenantId !== id);
+            d.water = d.water.filter(x => x.tenantId !== id);
+            d.electric = d.electric.filter(x => x.tenantId !== id);
+            saveData(d);
+            showToast('已删除');
+            navigateTo('tenants');
+        });
+    }
+
+    function showDeleteModal(onConfirm) {
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+        document.getElementById('confirmDeleteBtn').onclick = function() { modal.hide(); if (onConfirm) onConfirm(); };
+    }
+
+    // ================================ 导航 ================================
+    function navigateTo(page) {
+        const map = {
+            'dashboard': renderDashboard,
+            'tenants': renderTenants,
+            'rent': renderRent,
+            'water': renderWater,
+            'electric': renderElectric,
+            'manage': renderManage,
+            'add-tenant': renderAddTenant,
+            'add-rent': renderAddRent,
+            'add-water': renderAddWater,
+            'add-electric': renderAddElectric,
+            'add': renderAddPage,
+        };
+        if (map[page]) map[page]();
+        else renderDashboard();
+    }
+
+    function setActiveNav(page) {
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
+            el.classList.remove('active');
+            if (el.dataset.page === page) el.classList.add('active');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const page = this.dataset.page;
+                if (page) navigateTo(page);
+            });
+        });
+        renderDashboard();
+    });
+</script>
+</body>
+</html>
