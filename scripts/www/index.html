@@ -172,12 +172,25 @@
                 min-width: unset;
             }
         }
+        /* 文件上传按钮覆盖式样式 */
+        .file-upload-btn {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .file-upload-btn input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            font-size: 100px;
+        }
     </style>
 </head>
 <body>
-
-<!-- 永久文件输入框（位于 appContainer 外部，不会被重绘影响） -->
-<input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importData(event)">
 
 <div id="appContainer" class="container pb-4 px-3" style="margin-top: 8px;"></div>
 
@@ -671,7 +684,6 @@
                 <h5 class="fw-bold mb-0"><i class="bi bi-coin text-primary"></i> 租金</h5>
                 <button class="btn btn-sm btn-success" onclick="navigateTo('add-rent')"><i class="bi bi-plus"></i></button>
             </div>
-            <!-- 筛选行 -->
             <div class="filter-row">
                 <span class="text-muted-small me-2">筛选：</span>
                 <select class="form-select form-select-sm" id="rentYear" onchange="updateRentList()">
@@ -682,9 +694,7 @@
                 </select>
                 <button class="btn btn-sm btn-outline-secondary" onclick="updateRentList()"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
-            <div id="rentListContainer">
-                <!-- 由 updateRentList 填充 -->
-            </div>
+            <div id="rentListContainer"></div>
         `;
         document.getElementById('appContainer').innerHTML = html;
         setActiveNav('rent');
@@ -741,7 +751,6 @@
                 <h5 class="fw-bold mb-0"><i class="bi ${icon} text-${color}"></i> ${label}</h5>
                 <button class="btn btn-sm btn-${color}" onclick="navigateTo('add-${key}')"><i class="bi bi-plus"></i></button>
             </div>
-            <!-- 对比卡片 -->
             <div class="card compare-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-bar-chart-fill"></i> 全年${label}对比</span>
@@ -755,7 +764,6 @@
                     <div id="compareContent" class="row g-3"></div>
                 </div>
             </div>
-            <!-- 筛选行 -->
             <div class="filter-row mt-2">
                 <span class="text-muted-small me-2">明细筛选：</span>
                 <select class="form-select form-select-sm" id="listYear" onchange="updateUtilityList('${key}','${label}','${icon}','${color}','${amountClass}')">
@@ -770,7 +778,6 @@
         `;
         document.getElementById('appContainer').innerHTML = html;
         setActiveNav(key === 'electric' ? 'electric' : 'water');
-        // 默认填充对比内容和列表
         updateCompareContent(key, label, icon, color, amountClass);
         updateUtilityList(key, label, icon, color, amountClass);
     }
@@ -882,7 +889,7 @@
         container.innerHTML = html;
     }
 
-    // ================================ 管理页面（包含粘贴JSON恢复） ================================
+    // ================================ 管理页面（关键修改：覆盖式文件输入框） ================================
     function renderManage() {
         const currentYear = new Date().getFullYear();
         const years = Array.from({length: 10}, (_, i) => currentYear - i);
@@ -923,7 +930,11 @@
                             <button class="btn btn-outline-primary w-100" onclick="exportData()"><i class="bi bi-download"></i> 导出数据</button>
                         </div>
                         <div class="col-6">
-                            <label class="btn btn-outline-success w-100" for="importFileInput"><i class="bi bi-upload"></i> 导入数据</label>
+                            <!-- 关键：文件输入框直接覆盖在按钮上，点击即选择文件 -->
+                            <label class="btn btn-outline-success w-100 file-upload-btn m-0">
+                                <i class="bi bi-upload"></i> 导入数据
+                                <input type="file" accept=".json" onchange="importData(event)">
+                            </label>
                         </div>
                         <div class="col-12 mt-2">
                             <button class="btn btn-outline-danger w-100" onclick="confirmClearData()"><i class="bi bi-trash"></i> 清空所有数据</button>
@@ -931,7 +942,6 @@
                     </div>
                     <div class="text-muted-small mt-2">导入将覆盖当前所有数据，请谨慎操作。</div>
                     <hr>
-                    <!-- 新增：粘贴JSON恢复 -->
                     <div class="mt-2">
                         <label class="form-label fw-bold">粘贴JSON数据恢复</label>
                         <textarea class="form-control" id="jsonRestoreArea" rows="4" placeholder="在此粘贴 JSON 数据..."></textarea>
@@ -947,7 +957,7 @@
         queryHistoryRent();
     }
 
-    // 新增：从粘贴的JSON恢复数据
+    // 从粘贴的JSON恢复数据
     function restoreFromJSON() {
         const textarea = document.getElementById('jsonRestoreArea');
         const jsonStr = textarea.value.trim();
@@ -957,7 +967,6 @@
         }
         try {
             const imported = JSON.parse(jsonStr);
-            // 校验数据结构
             if (typeof imported !== 'object' || !('tenants' in imported) || !('rents' in imported) || !('water' in imported) || !('electric' in imported)) {
                 showToast('无效的数据格式，请检查是否包含 tenants, rents, water, electric 字段', 'danger');
                 return;
@@ -965,15 +974,15 @@
             if (confirm('恢复将覆盖当前所有数据（包括租客、租金、水费、电费），确定继续吗？')) {
                 saveData(imported);
                 showToast('数据恢复成功！', 'success');
-                textarea.value = ''; // 清空文本域
-                renderManage(); // 刷新管理页面
+                textarea.value = '';
+                renderManage();
             }
         } catch (err) {
             showToast('JSON解析失败：' + err.message, 'danger');
         }
     }
 
-    // 历史租金查询（管理页面）
+    // 历史租金查询
     function queryHistoryRent() {
         const year = document.getElementById('historyYear').value;
         const month = document.getElementById('historyMonth').value;
@@ -1050,6 +1059,7 @@
             }
         };
         reader.readAsText(file);
+        // 重置以便重复选择同一文件
         event.target.value = '';
     }
 
